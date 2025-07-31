@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>บันทึกเงินกู้</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+    label, input, button, select {
+      display: block;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    input, select {
+      padding: 0.5rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      background-color: #2d89ef;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1b65c1;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 2rem;
+      width: 100%;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    th {
+      background-color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <h2>หน้ากรอกข้อมูลเงินกู้</h2>
+  <form id="loanForm">
+    <label>ชื่อผู้กู้: <input type="text" id="borrower" required></label>
+    <label>ชื่อคนค้ำ: <input type="text" id="guarantor"></label>
+    <label>จำนวนเงิน (บาท): <input type="number" id="amount" required></label>
+    <label>เปอร์เซ็นต์ดอกเบี้ย: <input type="number" id="interest" required></label>
+    <label>วันที่กู้: <input type="date" id="borrowDate" required></label>
+    <label>คืนภายในกี่วัน: <input type="number" id="daysToReturn"></label>
+    <label>หรือคืนวันที่: <input type="date" id="returnDate"></label>
+    <button type="submit">บันทึก</button>
+  </form>
+
+  <h2>หน้าสรุปข้อมูล</h2>
+  <table id="summaryTable">
+    <thead>
+      <tr>
+        <th>ชื่อผู้กู้</th>
+        <th>วันที่กู้</th>
+        <th>วันที่จะคืน</th>
+        <th>จำนวนเงิน</th>
+        <th>ดอกเบี้ย (%)</th>
+        <th>ดอกเบี้ย (บาท)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById('loanForm');
+    const summaryTable = document.getElementById('summaryTable').querySelector('tbody');
+    const loans = JSON.parse(localStorage.getItem('loans') || '[]');
+
+    function saveAndRender() {
+      localStorage.setItem('loans', JSON.stringify(loans));
+      renderTable();
+    }
+
+    function renderTable() {
+      summaryTable.innerHTML = '';
+      const sorted = loans.sort((a, b) => new Date(a.returnDate) - new Date(b.returnDate));
+      for (const loan of sorted) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${loan.borrower}</td>
+          <td>${loan.borrowDate}</td>
+          <td>${loan.returnDate}</td>
+          <td>${loan.amount}</td>
+          <td>${loan.interest}</td>
+          <td>${((loan.amount * loan.interest) / 100).toFixed(2)}</td>
+        `;
+        summaryTable.appendChild(row);
+      }
+    }
+
+    form.onsubmit = e => {
+      e.preventDefault();
+      const borrower = document.getElementById('borrower').value;
+      const guarantor = document.getElementById('guarantor').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const interest = parseFloat(document.getElementById('interest').value);
+      const borrowDate = document.getElementById('borrowDate').value;
+      const daysToReturn = parseInt(document.getElementById('daysToReturn').value);
+      const returnDateInput = document.getElementById('returnDate').value;
+
+      let returnDate = returnDateInput;
+      if (!returnDate && daysToReturn) {
+        const bd = new Date(borrowDate);
+        bd.setDate(bd.getDate() + daysToReturn);
+        returnDate = bd.toISOString().split('T')[0];
+      }
+
+      if (!returnDate) {
+        alert("กรุณาระบุจำนวนวันหรือวันที่จะคืน");
+        return;
+      }
+
+      loans.push({ borrower, guarantor, amount, interest, borrowDate, returnDate });
+      saveAndRender();
+      form.reset();
+    };
+
+    renderTable();
+  </script>
+</body>
+</html>
